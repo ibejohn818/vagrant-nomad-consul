@@ -1,0 +1,33 @@
+---
+- name: common packages
+  package:
+    state: present
+    name:
+      - wget 
+      - gpg 
+      - coreutils
+      - ca-certificates 
+      - curl
+      - unzip
+
+- name: hashicorp repo
+  block:
+    - name: key check
+      stat:
+        path: "/usr/share/keyrings/hashicorp-archive-keyring.gpg"
+      register: hashikey_check
+
+    - name: repo key
+      ansible.builtin.shell:
+        cmd: wget -O- https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+      when: hashikey_check.stat.exists == False
+
+    - name: repo
+      ansible.builtin.apt_repository:
+        repo: deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com bookworm main
+        state: present
+        filename: hasicorp.list
+
+- name: set hostname
+  shell:
+    cmd: "hostnamectl set-hostname {{ inventory_hostname }}"

@@ -1,0 +1,32 @@
+---
+- hosts: nomad_consul_servers
+  strategy: free
+  gather_facts: yes
+  become: yes
+  vars_files:
+    - vars/vars.yml
+  vars:
+    nomad_type: server 
+    consul_type: server 
+  roles:
+    - common
+    - consul
+    - nomad
+    - dnsmasq
+- hosts:
+    - app
+    - data
+  strategy: free
+  gather_facts: yes
+  become: yes
+  vars_files:
+    - vars/vars.yml
+  vars:
+    nomad_type: client 
+    consul_type: client 
+  roles:
+    - common
+    - podman
+    - consul
+    - nomad
+    - dnsmasq

@@ -1,0 +1,21 @@
+---
+- name: install dnsmasq
+  package:
+    state: present
+    name: dnsmasq
+
+- name: copy config
+  copy:
+    src: files/10-consul.conf
+    dest: /etc/dnsmasq.d/
+
+- name: copy resolve
+  copy:
+    src: files/resolv.conf
+    dest: /etc/resolv.conf
+  
+- name: enable dnsmasq
+  service:
+    name: dnsmasq
+    enabled: yes
+    state: started

@@ -1,0 +1,90 @@
+datacenter = "{{ nomad_datacenter }}"
+region = "{{ nomad_region }}"
+data_dir = "/var/lib/nomad"
+
+
+log_level = "info"
+log_file = "/var/log/nomad/"
+log_rotate_bytes = 5000000
+log_rotate_max_files = 10
+disable_update_check = true
+
+bind_addr = "{{ '{{' }} GetInterfaceIP \"{{ network_interface }}\" {{ '}}' }}"
+
+{% if nomad_type == "server" %}
+advertise {
+  http = "{{ '{{' }} GetInterfaceIP \"{{ network_interface }}\" {{ '}}' }}"
+  rpc = "{{ '{{' }} GetInterfaceIP \"{{ network_interface }}\" {{ '}}' }}"
+  serf = "{{ '{{' }} GetInterfaceIP \"{{ network_interface }}\" {{ '}}' }}"
+}
+
+server {
+  enabled = true
+  bootstrap_expect = {{ nomad_bootstrap_expect }}
+  encrypt = "{{ nomad_encrypt_key }}"
+}
+{% endif %}
+
+{% if nomad_type == "client" %}
+
+plugin_dir = "/etc/nomad.d/plugins"
+
+client {
+  enabled = true
+  node_class = "{{ nomad_client_node_class }}"
+  max_kill_timeout = "300s"
+
+  {% if nomad_client_total_memory > 0 %}
+  memory_total_mb = {{ nomad_client_total_memory }}
+  {% endif %}
+
+  {% if nomad_client_total_cpu_mhz > 0 %}
+  cpu_total_compute = {{ nomad_client_total_cpu_mhz }}
+  {% endif %}
+}
+
+plugin "docker" {
+  config {
+    volumes {
+      enabled = true
+    }
+    allow_privileged = true
+    auth {
+      config = "/etc/docker/config.json"
+    }
+    allow_caps = [
+      "IPC_LOCK"
+    ]
+  }
+}
+
+plugin "nomad-driver-podman" {
+  config {
+      {% if podman_sock_path is not none %}
+      socket_path = "unix://{{ podman_sock_path }}"
+      {% endif %}
+      volumes {
+        enabled = true
+      }
+  }
+}
+
+{% endif %}
+
+tls {
+  http = true
+  rpc = true
+  verify_https_client = true
+  verify_server_hostname = true
+  ca_file = "/etc/nomad.d/nomad-ca.pem"
+  cert_file = "/etc/nomad.d/{{ nomad_type }}.pem"
+  key_file = "/etc/nomad.d/{{ nomad_type }}-key.pem"
+}
+
+consul {
+  ssl = true
+  address = "127.0.0.1:8501"
+  ca_file = "/etc/nomad.d/consul-ca.pem"
+  cert_file = "/etc/nomad.d/consul.pem"
+  key_file = "/etc/nomad.d/consul-key.pem"
+}

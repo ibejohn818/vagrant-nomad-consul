@@ -1,0 +1,56 @@
+---
+- name: install nomad
+  package:
+    state: present
+    name:
+      - nomad
+
+- name: ensure config
+  file:
+    state: directory
+    dest: "{{ item }}"
+  with_items:
+    - /etc/nomad.d
+    - /etc/nomad.d/plugins
+    - /var/log/nomad
+
+- name: copy nomad env
+  copy:
+    src: files/nomad.env
+    dest: /etc/nomad.d/nomad.env
+
+- name: copy certs
+  copy:
+    dest: "/etc/nomad.d/{{ item | basename }}"
+    src: "{{ tls_cert_path }}/{{ item }}"
+  with_items: "{{ nomad_tls_files }}"
+
+- name: Copy consul certs
+  copy:
+    dest: "/etc/nomad.d/{{ item.dest }}"
+    src: "{{ tls_cert_path }}/{{ item.src }}"
+  with_items: "{{ nomad_consul_tls_files }}"
+
+- name: download podman plugin
+  unarchive:
+    src: "{{ nomad_podman_plugin_url }}"
+    dest: /etc/nomad.d/plugins/
+    remote_src: true
+
+- name: nomad config template
+  template:
+    src: nomad.hcl.j2
+    dest: /etc/nomad.d/nomad.hcl
+
+- name: nomad systemd unit
+  copy:
+    src: files/nomad.service
+    dest: /lib/systemd/system/nomad.service
+
+- name: enable service
+  ansible.builtin.systemd_service:
+    daemon_reload: true
+    name: nomad
+    enabled: yes
+    state: started
+

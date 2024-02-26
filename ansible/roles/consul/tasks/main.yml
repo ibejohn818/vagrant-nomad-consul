@@ -1,0 +1,42 @@
+---
+- name: install consul
+  package:
+    state: present
+    name:
+      - consul
+
+- name: ensure consul dirs
+  file:
+    state: directory
+    path: "{{ item }}"
+  with_items:
+    - /etc/consuld.
+    - /var/log/consul
+
+- name: copy certs
+  copy:
+    dest: "/etc/consul.d/{{ item | basename }}"
+    src: "{{ tls_cert_path }}/{{ item }}"
+  with_items: "{{ consul_tls_files }}"
+
+- name: consul config template
+  template:
+    src: "{{ consul_type }}.json.j2"
+    dest: /etc/consul.d/consul.json
+
+- name: consul systemd unit
+  copy:
+    src: files/consul.service
+    dest: /lib/systemd/system/consul.service
+
+- name: copy consul env
+  copy:
+    src: files/consul.env
+    dest: /etc/consul.d/consul.env
+
+- name: enable service
+  ansible.builtin.systemd_service:
+    daemon_reload: true
+    name: consul
+    enabled: yes
+    state: started

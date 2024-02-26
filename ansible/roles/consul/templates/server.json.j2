@@ -1,0 +1,35 @@
+{
+  "datacenter": "{{ consul_datacenter }}",
+  "server": true,
+  "client_addr": "0.0.0.0",
+  "retry_join": {{ consul_retry_join|to_json }},
+  "bind_addr": "{{ '{{' }} GetInterfaceIP \"{{ network_interface }}\" {{ '}}' }}",
+  "bootstrap_expect": {{ consul_bootstrap_expect }},
+  "verify_incoming": true,
+  "verify_outgoing": true,
+  "verify_server_hostname": true,
+  "ca_file": "/etc/consul.d/consul-ca.pem",
+  "cert_file": "/etc/consul.d/server.pem",
+  "key_file": "/etc/consul.d/server-key.pem",
+  "ports": {
+    "dns": 8600,
+    "http": -1,
+    "https": 8501
+  },
+  "encrypt": "{{ consul_encrypt_key }}",
+  "log_level": "info",
+  "log_file": "/var/log/consul/",
+  "log_rotate_bytes": 5000000,
+  "log_rotate_max_files": 10,
+  "data_dir": "/var/lib/consul",
+  "disable_update_check": true,
+  "performance": {
+    "raft_multiplier": 1
+  },
+  "telemetry": {
+    "prometheus_retention_time": "30s"
+  },
+  "ui_config": {
+    "enabled": true
+  }
+}

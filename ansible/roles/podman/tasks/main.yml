@@ -1,0 +1,12 @@
+---
+- name: install podman
+  package:
+    state: present
+    name:
+      - podman
+
+- name: podman.socket service
+  service:
+    name: podman.socket
+    state: started
+    enabled: true
