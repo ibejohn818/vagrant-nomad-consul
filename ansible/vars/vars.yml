@@ -3,6 +3,7 @@ tls_cert_path: "../../../files/tls"
 network_interface: "eth1"
 nomad_region: "dc1"
 nomad_datacenter: "global"
+# overprovision nomad
 nomad_client_total_memory: 32000
 nomad_client_total_cpu_mhz: 32000
 nomad_podman_plugin_url: "https://releases.hashicorp.com/nomad-driver-podman/0.5.2/nomad-driver-podman_0.5.2_linux_amd64.zip"

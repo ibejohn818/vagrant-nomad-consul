@@ -25,7 +25,7 @@
     dest: /etc/docker/config.json
 
 - name: consul registry auth dir
-  file:
+  ansible.builtin.file:
     state: directory
     path: "{{ item }}"
   with_items:
@@ -33,7 +33,7 @@
     - /etc/docker/certs.d/registry.service.consul
 
 - name: consul registry auth certs
-  copy:
+  ansible.builtin.copy:
     src: "{{ tls_cert_path }}/{{ item.src }}"
     dest: "/etc/docker/certs.d/registry.service.consul/{{ item.dest }}"
   with_items:
