@@ -147,9 +147,6 @@ servers.each_with_index do |s, k|
   end
 end
 
-pp servers
-
-
 
 Vagrant.configure("2") do |config|
   # A common shared folder
