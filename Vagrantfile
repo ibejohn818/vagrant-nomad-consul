@@ -2,6 +2,7 @@
 # vi: set ft=ruby :
 
 require 'pp'
+# require 'FileUtils'
 
 Shared = Struct.new(:host, :vm)
 
@@ -147,6 +148,9 @@ servers.each_with_index do |s, k|
   end
 end
 
+# pp servers
+#
+# exit(0)
 
 Vagrant.configure("2") do |config|
   # A common shared folder
@@ -166,8 +170,14 @@ Vagrant.configure("2") do |config|
       SHELL
       
       # invidiual shared folder
-      node.vm.synced_folder machine[:shared_folder_local], machine[:shared_folder_remote]
-      node.vm.synced_folder "./ansible", "/vagrant/ansible"
+      # node.vm.synced_folder machine[:shared_folder_local], machine[:shared_folder_remote]
+      # node.vm.synced_folder "./ansible", "/vagrant/ansible"
+
+
+      machine[:shared].each do |share|
+        FileUtils.mkdir_p(share.host) unless File.exists?(share.host)
+        node.vm.synced_folder share.host, share.vm
+      end
 
       # node.vm.provision "ansible_local" do |ansible|
       #     #ansible.verbose = "vvvv"
