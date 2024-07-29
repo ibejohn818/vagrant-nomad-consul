@@ -162,8 +162,9 @@ Vagrant.configure("2") do |config|
   servers.each do |machine|
     config.vm.define machine[:hostname] do |node|
       node.vm.box = machine[:box]
-      # node.vm.base_address = machine[:ip_addr]
-      node.vm.network :private_network, ip: machine[:ip]
+      # node.vm.base_address = machine[:ip]
+      # node.vm.network :private_network, ip: machine[:ip]
+      node.vm.network "private_network", ip: machine[:ip]
       node.vm.provision "shell", inline: <<-SHELL
         # Fix hostname
         echo "#{machine[:hostname]}" > /etc/hostname
@@ -192,7 +193,7 @@ Vagrant.configure("2") do |config|
           a.playbook = "ansible/vagrant.yml"
           a.limit = "all"
           a.groups = {
-            "nomad_consul_servers" => ["nomad_consul0[1:3]"],
+            # "nomad_consul_servers" => ["nomad_consul0[1:3]"],
             "nomad_server" => ["nomad0[1:3]"],
             "consul_server" => ["consul0[1:3]"],
             "app" => ["app0[1:3]"],

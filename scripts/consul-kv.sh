@@ -4,7 +4,7 @@ DIR=$(cd $(dirname "${0}") && pwd)
 TLS_DIR="${DIR}/../tls"
 
 function consul_cmd() {
-  CONSUL_HTTP_ADDR=https://192.168.60.11:8501 \
+  CONSUL_HTTP_ADDR=https://192.168.60.14:8501 \
   CONSUL_CACERT="${TLS_DIR}/consul-ca.pem" \
   CONSUL_CLIENT_CERT="${TLS_DIR}/consul/client.pem" \
   CONSUL_CLIENT_KEY="${TLS_DIR}/consul/client-key.pem" \

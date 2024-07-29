@@ -14,7 +14,7 @@
     - nomad
     - dnsmasq
 
-- hosts: nomad
+- hosts: nomad_server
   strategy: free
   gather_facts: yes
   become: yes
@@ -29,7 +29,7 @@
     - nomad
     - dnsmasq
 
-- hosts: consul
+- hosts: consul_server
   strategy: free
   gather_facts: yes
   become: yes
@@ -56,6 +56,7 @@
   roles:
     - common
     # - podman
+    - docker
     - consul
     - nomad
     - dnsmasq

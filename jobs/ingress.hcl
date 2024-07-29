@@ -18,6 +18,9 @@ job "ingress" {
             port "https" {
                 static = 443
             }
+            port "api" {
+                static = 8080
+            }
         }
 
         service  {
@@ -41,17 +44,17 @@ job "ingress" {
             }
         }
 
-        task "traefik" {
+        task "ingress" {
 
             template {
                 data = "{{ key \"tls/consul/ca.pem\" }}"
-                destination = "secrets/consul/ca.crt"
+                destination = "secrets/consul/ca.pem"
                 change_mode = "noop"
             }
 
             template {
                 data = "{{ key \"tls/consul/client.pem\" }}"
-                destination = "secrets/consul/client.crt"
+                destination = "secrets/consul/client.pem"
                 change_mode = "noop"
             }
 
@@ -63,7 +66,7 @@ job "ingress" {
 
             template {
                 data = "{{ key \"tls/nomad/ca.pem\" }}"
-                destination = "secrets/nomad/ca.crt"
+                destination = "secrets/nomad/ca.pem"
                 change_mode = "noop"
             }
 
@@ -75,13 +78,19 @@ job "ingress" {
 
             template {
                 data = "{{ key \"tls/nomad/client.pem\" }}"
-                destination = "secrets/nomad/client.crt"
+                destination = "secrets/nomad/client.pem"
+                change_mode = "noop"
+            }
+
+            template {
+                data = "{{ key \"tls/service/ca.pem\" }}"
+                destination = "secrets/service/ca.pem"
                 change_mode = "noop"
             }
 
             template {
                 data = "{{ key \"tls/service/server.pem\" }}"
-                destination = "secrets/serives/server.pem"
+                destination = "secrets/service/server.pem"
                 change_mode = "noop"
             }
             template {
@@ -91,32 +100,29 @@ job "ingress" {
             }
             template {
                 data = "{{ key \"tls/service/client.pem\" }}"
-                destination = "secrets/sever/client.crt"
+                destination = "secrets/service/client.pem"
                 change_mode = "noop"
              }
 
             template {
                 data = <<EOF
 tls:
-    certificates:
-    options:
-        mtls:
-            clientAuth:
-                clientAuthType: RequireAndVerifyClientCert
-                caFiles:
-                - /secrets/service/ca.crt
-    stores:
-        default:
-            defaultCertificate:
-                certFile: /secrets/service/server.crt
-                keyFile: /secrets/service/server.key
-accessLog:
-  filePath: "/dev/stdout"
-errorlog:
-  filpath: /tmp/stderr
-log:
-  level: debug
-providers:
+  stores:
+    default:
+      defaultCertificate:
+        certFile: /secrets/service/server.pem
+        keyFile: /secrets/service/server.key
+  options:
+    default:
+      minVersion: VersionTLS12
+    mtls:
+      clientAuth:
+        clientAuthType: RequireAndVerifyClientCert
+        caFiles:
+          - /secrets/service/ca.pem
+  certificates:
+      certFile: /secrets/service/server.pem
+      keyFile: /secrets/service/server.key
 
 EOF
                 destination = "/local/conf/default.yaml"
@@ -126,11 +132,11 @@ EOF
             template {
                 data = <<EOF
 http:
-    routers:
-        dashboard:
-            rule: Host(`traefik.service.dc1.consul`)
-            service: api@internal
-            tls: true
+  routers:
+    dashboard:
+      rule: Host(`traefik.service.dc1.consul`)
+      service: api@internal
+      tls: true
 
 EOF
                 destination = "/local/conf/dashboard.yaml"
@@ -139,17 +145,17 @@ EOF
             template {
                 data = <<EOF
 tcp:
-    routers:
-        nomad:
-            rule: HostSNI(`nomad.service.dc1.consul`)
-            tls:
-                passthrough: true
-            service: nomad-svc
-    services:
-        nomad-svc:
-            loadbalancer:
-                servers:{{range service "http.nomad"}}
-                    - address: "{{.Address}}:{{.Port}}"{{end}}
+  routers:
+    nomad:
+      rule: HostSNI(`nomad.service.dc1.consul`)
+      tls:
+          passthrough: true
+      service: nomad-svc
+  services:
+    nomad-svc:
+      loadbalancer:
+        servers:{{range service "http.nomad"}}
+          - address: "{{.Address}}:{{.Port}}"{{end}}
 
 EOF
                 destination = "/local/conf/nomad.yaml"
@@ -163,7 +169,7 @@ EOF
 tcp:
     routers:
         consul:
-            rule: HostSNI(`consul.service.dc2.consul`)
+            rule: HostSNI(`consul.service.dc1.consul`)
             tls:
                 passthrough: true
             service: consul-svc
@@ -189,6 +195,7 @@ EOF
                     "--accessLog.filePath=/dev/stdout",
                     "--api.dashboard=true",
                     "--api.insecure=true",
+                    "--log.level=INFO",
                     "--providers.docker",
                     "--providers.file.directory=/local/conf",
                     "--providers.file.watch=true",
@@ -203,10 +210,11 @@ EOF
                     "--providers.consulCatalog.stale=false"
                 ]
 
-                //network_mode = "host"
+                network_mode = "host"
                 ports = [
                     "http",
-                    "https"
+                    "https",
+                    "api"
                 ]
                 privileged = true
                 volumes = [

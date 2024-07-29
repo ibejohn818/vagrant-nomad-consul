@@ -33,6 +33,7 @@ client {
   enabled = true
   node_class = "{{ nomad_client_node_class }}"
   max_kill_timeout = "300s"
+  network_interface = "{{ network_interface }}"
 
   {% if nomad_client_total_memory > 0 %}
   memory_total_mb = {{ nomad_client_total_memory }}
@@ -74,8 +75,8 @@ plugin "nomad-driver-podman" {
 tls {
   http = true
   rpc = true
-  verify_https_client = true
-  verify_server_hostname = true
+  verify_https_client = false
+  verify_server_hostname = false
   ca_file = "/etc/nomad.d/nomad-ca.pem"
   cert_file = "/etc/nomad.d/{{ nomad_type }}.pem"
   key_file = "/etc/nomad.d/{{ nomad_type }}-key.pem"

@@ -33,9 +33,9 @@ consul_tls_files:
   - consul/server-key.pem
 consul_datacenter: "dc1"
 consul_retry_join:
-  - 192.168.60.11
-  - 192.168.60.12
-  - 192.168.60.13
+  - 192.168.60.14
+  - 192.168.60.15
+  - 192.168.60.16
 consul_bootstrap_expect: 3
 podman_sock_path: "/var/run/podman/podman.sock"
 
