@@ -3,20 +3,23 @@
 Run a local HA nomad + consul server cluster with client nodes.
 
 By default vagrant will setup 3 nomad & 3 consul server instances setup as HA cluster.   
-In addition to the nomad + consul servers, a 3 node app client cluster will be created and a 
-2 node data client cluster.   
+In addition to the nomad + consul servers, 5 nomad client instances will be created.   
 
-Server OS is debian:12 and all services are configured VIA `ansible`.
+Server OS is `debian:12` and all services are configured VIA `ansible`.
 
 
 ## requirements
+NOTE: tested on ubuntu & debian desktop 
+
 * vagrant
-* hypervisor (IE: virtualbox | vmware)
+* hypervisor (IE: virtualbox (tested) | vmware (vagrant plugin errors prevented testing) )
 * docker
 * ansible 
 
-| NOTE: tested with virtualbox on ubuntu & debian x86
+For terminal access, install the `nomad` & `consul` cli binaries.    
 
+* nomad: https://developer.hashicorp.com/nomad/docs/install
+* consul: https://developer.hashicorp.com/consul/docs/install
 
 ## Network
 Each instance will have a NAT nic to connect to the internet and a private network 
@@ -26,13 +29,13 @@ Private Net: `192.168.60.0\24`
 
 ### Servers
 * nomad01-03: `192.168.60.11-13`
-* consul01-03 - `192.168.60.20`
+* consul01-03 - `192.168.60.14-16`
 
 ### Clients
-* app01-03 - `192.168.60.30`
+* app01-03 - `192.168.60.21-23`
     * nomad meta
         - `class: app`
-* data01-02 - `192.168.60.30`
+* data01-02 - `192.168.60.31-32`
     * nomad meta
         - `class: data`
 
@@ -43,7 +46,7 @@ Clients are also utilizing `dnsmasq` for `*.service.consul` dns resolution.
 ## Ansible
 
 The `ansible` directory contains the ansible structure for all setup of the vagrant instances.   
-The `Vagrantfile` will trigger ansible provisioning (playbook:`ansible/vagrant.yml`) on all instances in parallel after the last client has been booted.   
+The `Vagrantfile` will trigger ansible provisioning (playbook:`ansible/vagrant.yml`) on all instances in parallel after the last client has been started.   
 
 NOTE:   
 After the initial booting and provisioning of the vagrant instances, the ansbile inventory can be copied to `ansible/inventory/vagrant/hosts` from `.vagrant/provisioning/ansible/` directory.
@@ -65,6 +68,13 @@ make generate-certs
 ```shell
 vagrant up
 ```
+After the instances have been provisioned, run the following script to add all certificates to the
+consul KV.
+
+```shell
+scripts/consul-kv.sh
+```
+
 ## accessing nomad & consul
 
 Nomad: (`nomad01-03` serve the dashboard)   
@@ -74,10 +84,7 @@ Nomad: (`nomad01-03` serve the dashboard)
 Consul: (`consul01-03` serve the dashboard) 
 * consul01 - http://192.168.60.14:8501
 
-For terminal access, first install the `nomad` & `consul` cli binaries.    
-
-* nomad: https://developer.hashicorp.com/nomad/docs/install
-* consul: https://developer.hashicorp.com/consul/docs/install
+## nomad & consul cli
 
 Source `nomad` env vars
 ```shell
