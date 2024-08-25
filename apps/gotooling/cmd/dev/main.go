@@ -1,50 +1,54 @@
 package main
 
 import (
-	"fmt"
+	"context"
 	"gotooling/johnhardy.io/pkg/hashi"
-	"time"
+	"log"
+
+	nomad "github.com/hashicorp/nomad/api"
 )
 
-func main() {
+func progress(_ *hashi.JobDeployMonitor, d *nomad.Deployment) {
+	log.Printf("Deploy Status: %s \r", d.Status)
+}
+
+func deploy(ctx context.Context) {
+
 
 	ncli := hashi.NomadClient()
 	njobs := ncli.Jobs()
-  nevals := ncli.Evaluations()
-  ndeploy := ncli.Deployments()
+	nevals := ncli.Evaluations()
+	ndeploy := ncli.Deployments()
 
-	jobPath := "/home/jhardy/projects/lab/vagrant-nomad-consul/jobs/ingress.hcl"
+	var err error
 
-	job, err := hashi.ParseJob(jobPath)
+	ingressPath := "/home/jhardy/projects/lab/vagrant-nomad-consul/jobs/ingress.hcl"
+	registryPath := "/home/jhardy/projects/lab/vagrant-nomad-consul/jobs/registry.hcl"
 
+	ingressJob, err := hashi.JobFromHcl(ingressPath)
 	if err != nil {
 		panic(err)
 	}
 
-	plan, planErr := hashi.PlanJob(njobs, job)
-
-	if planErr != nil {
-		panic(planErr)
+	registryJob, err := hashi.JobFromHcl(registryPath)
+	if err != nil {
+		panic(err)
 	}
 
-	fmt.Printf("Plan index: %d \n", plan.JobModifyIndex)
+  mon := hashi.NewJobDeployMonitor(ingressJob, njobs, nevals, ndeploy)
+  go mon.DeployWithCallbacks(ctx, progress, nil)
 
-	regRes, regErr := hashi.RunJob(njobs, job, "")
+  mon2 := hashi.NewJobDeployMonitor(registryJob, njobs, nevals, ndeploy)
+  go mon2.DeployWithCallbacks(ctx, progress, nil)
 
-	if regErr != nil {
-		panic(regErr)
-	}
 
-	fmt.Printf("EvalID: %s \n", regRes.EvalID)
+}
 
-  deployID, evalErr := hashi.TryGetDeploymentID(nevals, regRes.EvalID, 0)
-	if evalErr != nil {
-		panic(evalErr)
-	}
+func main() {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	for i := 0; i < 20; i++ {
-    hashi.DeployInfo(ndeploy, deployID)
-		time.Sleep(1 * time.Second)
-	}
+  go deploy(ctx)
 
+	<-ctx.Done()
 }

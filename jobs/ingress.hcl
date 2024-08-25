@@ -44,7 +44,7 @@ job "ingress" {
             }
         }
 
-        task "ingress" {
+        task "traefik" {
 
             template {
                 data = "{{ key \"tls/consul/ca.pem\" }}"
@@ -200,7 +200,7 @@ EOF
                     "--providers.file.directory=/local/conf",
                     "--providers.file.watch=true",
                     "--providers.consulCatalog.prefix=traefik",
-                    "--providers.consulCatalog.refreshInterval=30s",
+                    "--providers.consulCatalog.refreshInterval=35s",
                     "--providers.consulCatalog.exposedByDefault=false",
                     "--providers.consulCatalog.endpoint.address=127.0.0.1:8501",
                     "--providers.consulCatalog.endpoint.scheme=https",

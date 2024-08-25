@@ -31,6 +31,7 @@
   with_items:
     - /etc/docker/certs.d
     - /etc/docker/certs.d/registry.service.consul
+    - /etc/docker/certs.d/registry.service.dc1.consul
 
 - name: consul registry auth certs
   ansible.builtin.copy:
@@ -44,13 +45,34 @@
     - src: "service-ca.pem"
       dest: "ca.crt"
 
+- name: dc1 consul registry auth certs
+  ansible.builtin.copy:
+    src: "{{ tls_cert_path }}/{{ item.src }}"
+    dest: "/etc/docker/certs.d/registry.service.dc1.consul/{{ item.dest }}"
+  with_items:
+    - src: "service/client.pem"
+      dest: "client.cert"
+    - src: "service/client-key.pem"
+      dest: "client.key"
+    - src: "service-ca.pem"
+      dest: "ca.crt"
+
+- name: copy dc1 service ca cert to trusted root
+  ansible.builtin.copy:
+    src: "{{ tls_cert_path }}/service-ca.pem"
+    dest: "/usr/local/share/ca-certificates/service-ca.pem"
+
+- name: update trusted root ca's
+  ansible.builtin.command: /usr/sbin/update-ca-certificates
+  
+
 - name:
   service:
     name: docker
     enabled: yes
     state: started
 
-- name: docer group to vagrant user 
+- name: docker group to vagrant user 
   user:
     name: vagrant
     state: present

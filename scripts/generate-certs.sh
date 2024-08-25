@@ -177,12 +177,12 @@ openssl req -x509 -newkey rsa:4096 -sha256 -days 3650 \
     -addext "subjectAltName=DNS:service,DNS:localhost,IP:127.0.0.1" \
     -addext "basicConstraints=critical,CA:TRUE"
 
-# nomad server
+# server
 openssl req -new -newkey rsa:4096 -nodes  \
     -subj "/C=US/ST=CA/O=Lab/OU=Engineering/CN=Lab Service Server" \
     -keyout  service/server-key.pem \
     -out service/server.csr \
-    -addext "subjectAltName=DNS:*.service.local,DNS: service.local" \
+    -addext "subjectAltName=DNS:*.service.local,DNS: service.local,DNS: *.service.dc1.consul, DNS: *.service.consul" \
     -addext "extendedKeyUsage = serverAuth, clientAuth" \
     -addext "basicConstraints=critical,CA:FALSE" 
 
@@ -192,7 +192,7 @@ openssl x509 -req -days 3650 \
   -CA service-ca.pem -CAkey service-ca-key.pem -CAcreateserial \
   -out service/server.pem
 
-# nomad client
+# client
 openssl req -new -newkey rsa:4096 -nodes  \
     -subj "/C=US/ST=CA/O=Lab/OU=Engineering/CN=Lab Service Client" \
     -keyout  service/client-key.pem \
