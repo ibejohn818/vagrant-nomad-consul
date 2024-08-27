@@ -180,14 +180,16 @@ Vagrant.configure("2") do |config|
         node.vm.synced_folder share.host, share.vm
       end
 
+      # for easier debugging
       # node.vm.provision "ansible_local" do |ansible|
       #     #ansible.verbose = "vvvv"
       #     ansible.playbook = "vagrant.yml"
       #     ansible.tags = []
       #     ansible.provisioning_path = "/vagrant/ansible"
-      #     #ansible.vault_password_file = "~/.ansible/.vaultpw"
       # end
 
+
+    # to speed up ansible, only run ansible during the final machines provisioning
     if machine[:hostname] == last_hostname
       node.vm.provision "ansible" do |a|
           a.playbook = "ansible/vagrant.yml"

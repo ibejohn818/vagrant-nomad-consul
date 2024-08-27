@@ -6,6 +6,11 @@
 
 - name: copy config
   copy:
+    src: files/dnsmasq.conf
+    dest: /etc/dnsmasq.conf
+
+- name: copy config fragments
+  copy:
     src: files/10-consul.conf
     dest: /etc/dnsmasq.d/
 

@@ -64,7 +64,7 @@ job "registry" {
             # }
             #
             template { 
-                data = file("config/registry.yml")
+                data = file("includes/registry.yml")
                 destination = "local/registry/config.yml"
             }
 
@@ -79,6 +79,7 @@ job "registry" {
                 image = "registry:2.4"
                 ports = ["http"]
                 volumes = [
+                    "/vagrant/data/registry:/var/lib/registry",
                     "local/registry:/etc/docker/registry"
                 ]
             }

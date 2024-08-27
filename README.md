@@ -21,6 +21,10 @@ For terminal access, install the `nomad` & `consul` cli binaries.
 * nomad: https://developer.hashicorp.com/nomad/docs/install
 * consul: https://developer.hashicorp.com/consul/docs/install
 
+I also suggest running `dnsmasq` on the host machine to enable consul DNS resolution. (IE: {SERVICE-NAME}.service.dc1.consul)  
+A configuration fragment for `dnsmasq` is located at `conf/dnsmasq.d/00-consul.conf`
+
+
 ## Network
 Each instance will have a NAT nic to connect to the internet and a private network 
 that nomad will utilize as its bridge network when creating docker tasks.

@@ -8,39 +8,37 @@ import (
 	nomad "github.com/hashicorp/nomad/api"
 )
 
-func progress(_ *hashi.JobDeployMonitor, d *nomad.Deployment) {
-	log.Printf("Deploy Status: %s \r", d.Status)
+func progress(jdm *hashi.JobDeployMonitor, d *nomad.Deployment) {
+  name := jdm.JobName()
+	log.Printf("%s Deploy Status: %s \r", name,  d.Status)
 }
 
-func deploy(ctx context.Context) {
+// ingressPath := "/home/jhardy/projects/lab/vagrant-nomad-consul/jobs/ingress.hcl"
+// registryPath := "/home/jhardy/projects/lab/vagrant-nomad-consul/jobs/registry.hcl"
+// promPath := "/home/jhardy/projects/lab/vagrant-nomad-consul/jobs/prometheus.hcl"
+var jobs map[string]string = map[string]string{
+	"ingress":    "/home/jhardy/projects/lab/vagrant-nomad-consul/jobs/ingress.hcl",
+	"registry":   "/home/jhardy/projects/lab/vagrant-nomad-consul/jobs/registry.hcl",
+	"prometheus": "/home/jhardy/projects/lab/vagrant-nomad-consul/jobs/prometheus.hcl",
+	"grafana": "/home/jhardy/projects/lab/vagrant-nomad-consul/jobs/grafana.hcl",
+}
 
+var ncli *nomad.Client = hashi.NomadClient()
+var njobs hashi.NomadJobs = ncli.Jobs()
+var nevals hashi.NomadEvaluations = ncli.Evaluations()
+var ndeploy hashi.NomadDeployments = ncli.Deployments()
 
-	ncli := hashi.NomadClient()
-	njobs := ncli.Jobs()
-	nevals := ncli.Evaluations()
-	ndeploy := ncli.Deployments()
+func deploy(ctx context.Context, hclPath string) {
 
 	var err error
 
-	ingressPath := "/home/jhardy/projects/lab/vagrant-nomad-consul/jobs/ingress.hcl"
-	registryPath := "/home/jhardy/projects/lab/vagrant-nomad-consul/jobs/registry.hcl"
-
-	ingressJob, err := hashi.JobFromHcl(ingressPath)
+	jobData, err := hashi.JobFromHcl(hclPath)
 	if err != nil {
 		panic(err)
 	}
 
-	registryJob, err := hashi.JobFromHcl(registryPath)
-	if err != nil {
-		panic(err)
-	}
-
-  mon := hashi.NewJobDeployMonitor(ingressJob, njobs, nevals, ndeploy)
-  go mon.DeployWithCallbacks(ctx, progress, nil)
-
-  mon2 := hashi.NewJobDeployMonitor(registryJob, njobs, nevals, ndeploy)
-  go mon2.DeployWithCallbacks(ctx, progress, nil)
-
+	mon := hashi.NewJobDeployMonitor(jobData, njobs, nevals, ndeploy)
+	go mon.DeployWithCallbacks(ctx, progress, nil)
 
 }
 
@@ -48,7 +46,10 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-  go deploy(ctx)
+	for k, v := range jobs {
+		log.Println("Deploy: ", k)
+		go deploy(ctx, v)
+	}
 
 	<-ctx.Done()
 }

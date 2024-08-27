@@ -10,6 +10,7 @@
     consul_type: server 
   roles:
     - common
+    - dnsmasq
     - consul
     - nomad
     - dnsmasq
@@ -25,9 +26,9 @@
     consul_type: client 
   roles:
     - common
+    - dnsmasq
     - consul
     - nomad
-    - dnsmasq
 
 - hosts: consul_server
   strategy: free
@@ -39,8 +40,8 @@
     consul_type: server 
   roles:
     - common
-    - consul
     - dnsmasq
+    - consul
   
 - hosts:
     - app
@@ -56,7 +57,7 @@
   roles:
     - common
     # - podman
+    - dnsmasq
     - docker
     - consul
     - nomad
-    - dnsmasq

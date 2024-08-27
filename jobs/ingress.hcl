@@ -5,10 +5,11 @@ job "ingress" {
     type = "service"
     group "server" {
 
-        count = 3
+        count = 5
         constraint {
             attribute = "${node.class}"
-            value = "app"
+      operator="set_contains_any"
+            value = "app,data"
         }
 
         network {

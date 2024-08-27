@@ -87,6 +87,14 @@ func NewJobDeployMonitor(
 	return &d
 }
 
+func (j *JobDeployMonitor) JobName() string {
+  if j.job != nil && j.job.Name != nil {
+    return *j.job.Name
+  }
+
+  return "n/a"
+}
+
 func (j *JobDeployMonitor) Status() string {
 	return j.status
 }
