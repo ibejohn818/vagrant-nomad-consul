@@ -1,0 +1,78 @@
+scope: postgres-ha
+namespace: /db/
+name: postgresql-{{ env "NOMAD_ALLOC_ID" }}
+
+log:
+  level: DEBUG
+
+restapi:
+  listen: 127.0.0.1:{{ env "NOMAD_META_db_rest_port" }}
+  connect_address: 127.0.0.1:{{ env "NOMAD_META_db_rest_port" }}
+  authentication:
+    username: restadmin
+    password: somepassword
+
+consul:
+  host: 127.0.0.1:8501
+  scheme: https
+  cacert: /secrets/consul/ca.crt
+  cert: /secrets/consul/client.crt
+  key: /secrets/consul/client.key
+  register_service: true
+
+bootstrap:
+  # this section will be written into consul:/<namespace>/<scope>/config after initializing new cluster
+  # and all other cluster members will use it as a `global configuration`
+  dcs:
+    ttl: 30
+    loop_wait: 10
+    retry_timeout: 10
+    maximum_lag_on_failover: 1048576
+    postgresql:
+      use_pg_rewind: true
+      parameters:
+        max_connections: {{ env "NOMAD_META_db_max_connections" }}
+        shared_preload_libraries: timescaledb
+
+  # some desired options for 'initdb'
+  initdb:  # Note: It needs to be a list (some options need values, others are switches)
+  - encoding: UTF8
+  - data-checksums
+
+  pg_hba:  # Add following lines to pg_hba.conf after running 'initdb'
+  - host replication replicator 0.0.0.0/0 md5
+  - host all all 0.0.0.0/0 md5
+
+  # Some additional users which needs to be created after initializing new cluster
+  users:
+    admin:
+      password: somepassword
+      options:
+        - createrole
+        - createdb
+
+postgresql:
+  listen: 0.0.0.0:{{ env "NOMAD_PORT_postgres" }}
+  connect_address: {{ env "NOMAD_IP_postgres" }}:{{ env "NOMAD_PORT_postgres" }}
+  bin_dir: /usr/libexec/postgresql
+  data_dir: data/postgresql0
+  pgpass: /tmp/pgpass0
+  authentication:
+    replication:
+      username: replicator
+      password: somepassword
+    superuser:
+      username: postgres
+      password: somepassword
+    rewind:  # Has no effect on postgres 10 and lower
+      username: rewind_user
+      password: somepassword
+
+watchdog:
+  mode: off
+
+tags:
+    nofailover: false
+    noloadbalance: false
+    clonefrom: false
+    nosync: false

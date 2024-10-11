@@ -36,7 +36,7 @@ job "node-exporter" {
         task "node-exporter" {
             driver = "docker"
             config {
-                image = "prom/node-exporter:v1.3.1"
+                image = "prom/node-exporter:v1.8.2"
                 args = [
                     "--path.procfs", "/host/proc",
                     "--path.sysfs", "/host/sys",

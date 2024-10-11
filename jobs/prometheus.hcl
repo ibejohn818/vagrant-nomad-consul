@@ -22,7 +22,7 @@ job "prometheus" {
 
     group "server" {
         network {
-          port "http" {to = 8080 }
+          port "http" {to = 9090 }
         }
 
         service {
@@ -31,12 +31,12 @@ job "prometheus" {
 
             port = "http"
 
-            check {
-                type     = "tcp"
-                port     = "http"
-                interval = "30s"
-                timeout  = "5s"
-            }
+            # check {
+            #     type     = "tcp"
+            #     port     = "http"
+            #     interval = "30s"
+            #     timeout  = "5s"
+            # }
 
             tags = [
                 "prometheus",
@@ -123,6 +123,7 @@ job "prometheus" {
                     "--config.file=/local/config/prom.yml",
                     "--web.listen-address=:${NOMAD_PORT_http}"
                 ]
+                network_mode = "host"
                 privileged=true
                 image = "prom/prometheus:v2.47.2"
                 ports = ["http"]

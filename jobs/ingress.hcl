@@ -188,7 +188,7 @@ EOF
 
             config {
 
-                image = "traefik:v2.11"
+                image = "traefik:v3.1.4"
 
                 args = [
                     "--entryPoints.http.address=:80",
