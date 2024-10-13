@@ -182,7 +182,7 @@ openssl req -new -newkey rsa:4096 -nodes  \
     -subj "/C=US/ST=CA/O=Lab/OU=Engineering/CN=Lab Service Server" \
     -keyout  service/server-key.pem \
     -out service/server.csr \
-    -addext "subjectAltName=DNS:*.service.local,DNS: service.local,DNS: *.service.dc1.consul, DNS: *.service.consul" \
+    -addext "subjectAltName=DNS:*.service.local,DNS: service.local,DNS: *.service.dc1.consul, DNS: *.service.consul, DNS: *.vagrant.local" \
     -addext "extendedKeyUsage = serverAuth, clientAuth" \
     -addext "basicConstraints=critical,CA:FALSE" 
 
@@ -197,7 +197,7 @@ openssl req -new -newkey rsa:4096 -nodes  \
     -subj "/C=US/ST=CA/O=Lab/OU=Engineering/CN=Lab Service Client" \
     -keyout  service/client-key.pem \
     -out service/client.csr \
-    -addext "subjectAltName=DNS:client.service.local" \
+    -addext "subjectAltName=DNS:client.service.local, DNS: *.vagrant.local" \
     -addext "extendedKeyUsage = serverAuth, clientAuth" \
     -addext "basicConstraints=critical,CA:FALSE" 
 

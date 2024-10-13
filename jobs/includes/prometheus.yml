@@ -11,7 +11,32 @@ scrape_configs:
   - targets: ['10.0.3.135:9100']
   - targets: ['10.0.3.120:9100']
 
-- job_name: nomad
+- job_name: nomad-server
+  consul_sd_configs:
+  - server: 'consul.service.dc1.consul:8501'
+    scheme: https
+    services: ["nomad"]
+    tls_config:
+      ca_file: /secrets/consul/ca.pem
+      cert_file: /secrets/consul/client.pem
+      key_file: /secrets/consul/client.key
+      insecure_skip_verify: true
+    tags: ["http"]
+  relabel_configs:
+  - source_labels: [__meta_consul_node]
+    target_label: instance
+  scrape_interval: 5s
+  metrics_path: /v1/metrics
+  params:
+    format: ["prometheus"]
+  scheme: https
+  tls_config:
+    ca_file: /secrets/nomad/ca.pem
+    cert_file: /secrets/nomad/client.pem
+    key_file: /secrets/nomad/client.key
+    insecure_skip_verify: true
+
+- job_name: nomad-client
   consul_sd_configs:
   - server: 'consul.service.dc1.consul:8501'
     scheme: https

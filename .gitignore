@@ -5,3 +5,5 @@ shared
 dev.rb
 # generated certs
 tls/*
+.idea/
+bin/*

@@ -2,7 +2,7 @@
 REPO ?= ibejohn818/nomad-consul-vagrant
 
 PLATFORM ?= linux/amd64
-REGISTRY ?= registry.service.dc1.consul
+REGISTRY ?= registry.vagrant.local
 TAG ?= latest
 
 .PHONY: postgres
@@ -23,7 +23,7 @@ postgres:
 
 
 tag_%:
-	docker tag $* $(REGISTRY)/$*
+	docker tag $*:$(TAG) $(REGISTRY)/$*:$(TAG)
 
 push_%:
-	docker push --disable-content-trust $(REGISTRY)/$*
+	docker push --disable-content-trust $(REGISTRY)/$*:$(TAG)

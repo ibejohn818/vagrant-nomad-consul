@@ -8,7 +8,7 @@ job "ingress" {
         count = 5
         constraint {
             attribute = "${node.class}"
-      operator="set_contains_any"
+            operator="set_contains_any"
             value = "app,data"
         }
 
@@ -135,7 +135,7 @@ EOF
 http:
   routers:
     dashboard:
-      rule: Host(`traefik.service.dc1.consul`)
+      rule: "Host(`traefik.service.dc1.consul`) || Host(`traefik.vagrant.local`)"
       service: api@internal
       tls: true
 
@@ -148,7 +148,7 @@ EOF
 tcp:
   routers:
     nomad:
-      rule: HostSNI(`nomad.service.dc1.consul`)
+      rule: HostSNI(`nomad.vagrant.local`)
       tls:
           passthrough: true
       service: nomad-svc
@@ -170,7 +170,7 @@ EOF
 tcp:
     routers:
         consul:
-            rule: HostSNI(`consul.service.dc1.consul`)
+            rule: HostSNI(`consul.vagrant.local`)
             tls:
                 passthrough: true
             service: consul-svc
@@ -194,9 +194,10 @@ EOF
                     "--entryPoints.http.address=:80",
                     "--entryPoints.https.address=:443",
                     "--accessLog.filePath=/dev/stdout",
+                    "--accessLog.bufferingSize=1000",
                     "--api.dashboard=true",
                     "--api.insecure=true",
-                    "--log.level=INFO",
+                    "--log.level=TRACE",
                     "--providers.docker",
                     "--providers.file.directory=/local/conf",
                     "--providers.file.watch=true",

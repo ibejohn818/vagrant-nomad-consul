@@ -88,11 +88,11 @@ func NewJobDeployMonitor(
 }
 
 func (j *JobDeployMonitor) JobName() string {
-  if j.job != nil && j.job.Name != nil {
-    return *j.job.Name
-  }
+	if j.job != nil && j.job.Name != nil {
+		return *j.job.Name
+	}
 
-  return "n/a"
+	return "n/a"
 }
 
 func (j *JobDeployMonitor) Status() string {
@@ -289,6 +289,27 @@ func DeployInfo(deps NomadDeployments, deployID string) (*nomad.Deployment, erro
 	ops := nomad.QueryOptions{}
 
 	res, _, err := deps.Info(deployID, &ops)
+
+	return res, err
+}
+
+func JobList(jobs NomadJobs) ([]*nomad.JobListStub, error) {
+
+	ops := nomad.QueryOptions{
+		Namespace: "*",
+	}
+
+	res, _, err := jobs.List(&ops)
+
+	return res, err
+}
+
+func JobInfo(jcli NomadJobs, id, namespace string) (*nomad.Job, error) {
+	ops := nomad.QueryOptions{
+		Namespace: namespace,
+	}
+
+	res, _, err := jcli.Info(id, &ops)
 
 	return res, err
 }

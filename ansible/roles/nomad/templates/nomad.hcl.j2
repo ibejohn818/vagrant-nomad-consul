@@ -91,3 +91,12 @@ consul {
   cert_file = "/etc/nomad.d/consul.pem"
   key_file = "/etc/nomad.d/consul-key.pem"
 }
+
+telemetry {
+  collection_interval = "5s"
+  disable_hostname = true
+  prometheus_metrics = true
+  publish_allocation_metrics = true
+  publish_node_metrics = true
+}
+

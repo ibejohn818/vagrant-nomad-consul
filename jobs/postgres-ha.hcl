@@ -78,6 +78,8 @@ job "postgres-ha" {
 
     group "postgres" {
 
+        count = var.count
+
         network {
             port "postgres" {
                 static = var.db_port
@@ -135,7 +137,6 @@ job "postgres-ha" {
             unlimited = true
         }
 
-        count = var.count
 
         task "postgres" {
             driver = "docker"
@@ -186,7 +187,9 @@ job "postgres-ha" {
 
             env {
                 PG_EXPORTER_AUTO_DISCOVER_DATABASES = "true"
-                PG_EXPORTER_EXTEND_QUERY_PATH = "/local/config/postgres-exporter.yaml"
+                DATA_SOURCE_USER="postgres"
+                DATA_SOURCE_PASSWORD="somepassword"
+                # PG_EXPORTER_EXTEND_QUERY_PATH = "/local/config/postgres-exporter.yaml"
             }
 
             template {

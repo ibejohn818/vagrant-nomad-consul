@@ -36,12 +36,12 @@ job "grafana" {
             tags = [
                 "grafana",
                 "traefik.enable=true",
-                "traefik.http.routers.grafana.rule=Host(`grafana.service.dc1.consul`)",
+                "traefik.http.routers.grafana.rule=Host(`grafana.service.dc1.consul`) || Host(`grafana.vagrant.local`)",
                 "traefik.http.routers.grafana.entrypoints=http",
                 "traefik.http.routers.grafana.middlewares=grafana-https",
                 "traefik.http.middlewares.grafana-https.redirectscheme.scheme=https",
 
-                "traefik.http.routers.grafanassl.rule=Host(`grafana.service.dc1.consul`)",
+                "traefik.http.routers.grafanassl.rule=Host(`grafana.service.dc1.consul`) || Host(`grafana.vagrant.local`)",
                 "traefik.http.routers.grafanassl.entrypoints=https",
                 "traefik.http.routers.grafanassl.tls=true",
             ]

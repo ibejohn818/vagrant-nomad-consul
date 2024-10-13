@@ -42,12 +42,12 @@ job "registry" {
                 "registry",
                 "traefik.enable=true",
 
-                "traefik.http.routers.dockreg.rule=Host(`registry.service.dc1.consul`)",
+                "traefik.http.routers.dockreg.rule=Host(`registry.service.dc1.consul`) || Host(`registry.vagrant.local`)",
                 "traefik.http.routers.dockreg.entrypoints=http",
                 "traefik.http.routers.dockreg.middlewares=dockreg-https",
                 "traefik.http.middlewares.dockreg-https.redirectscheme.scheme=https",
 
-                "traefik.http.routers.dockreg-ssl.rule=Host(`registry.service.dc1.consul`)",
+                "traefik.http.routers.dockreg-ssl.rule=Host(`registry.service.dc1.consul`) || Host(`registry.vagrant.local`)",
                 "traefik.http.routers.dockreg-ssl.entrypoints=https",
                 "traefik.http.routers.dockreg-ssl.tls=true",
               
@@ -66,6 +66,7 @@ job "registry" {
             template { 
                 data = file("includes/registry.yml")
                 destination = "local/registry/config.yml"
+                change_mode = "noop"
             }
 
 

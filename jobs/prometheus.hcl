@@ -41,7 +41,7 @@ job "prometheus" {
             tags = [
                 "prometheus",
                 "traefik.enable=true",
-                "traefik.http.routers.promssl.rule=Host(`prometheus.service.dc1.consul`)",
+                "traefik.http.routers.promssl.rule=Host(`prometheus.service.dc1.consul`) || Host(`prometheus.vagrant.local`)",
                 "traefik.http.routers.promssl.entrypoints=https",
                 "traefik.http.routers.promssl.tls=true",
                 //"traefik.http.routers.promssl.tls.options=mtls@file"
@@ -118,12 +118,13 @@ job "prometheus" {
             }
 
             config {
+                dns_servers = ["172.17.0.1"]
 
                 args = [
                     "--config.file=/local/config/prom.yml",
                     "--web.listen-address=:${NOMAD_PORT_http}"
                 ]
-                network_mode = "host"
+                # network_mode = "host"
                 privileged=true
                 image = "prom/prometheus:v2.47.2"
                 ports = ["http"]
