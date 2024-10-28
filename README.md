@@ -7,7 +7,6 @@ In addition to the nomad + consul servers, 5 nomad client instances will be crea
 
 Server OS is `debian:12` and all services are configured VIA `ansible`.
 
-
 ## requirements
 NOTE: tested on ubuntu & debian desktop 
 
@@ -116,12 +115,23 @@ cd jobs && nomad job run ingress.hcl
  - TODO: Complete example jobs doc
 
 ## Tooling
+
+Tools for running nomad & consul at scale are located at `apps/`
+
 #### `apps/gotooling` - golang tooling
     - `cmd/logs` - select job allocations logs to stream concurrently and/or write to file
-    - `cmd/dev` - deploy and monitor multiple HCL's concurrently
+    - `cmd/dev` - deploy and monitor multiple HCL's concurrently (TODO: rename binary)
 
 #### `apps/rustooling`
+    - TODO: docs on rust tooling
     
+### Test hardware
+Ubuntu 24.04 & Debian Bookworm
+    - AMD 3950x 65gb ram
+    - AMD 5950x 128gb ram
+    - AMD 7950x 96gb ram
+    - AMD 7960x 128gb ram
+    - AMD 7975wx 128gb ram
 
 ### TODO
 
