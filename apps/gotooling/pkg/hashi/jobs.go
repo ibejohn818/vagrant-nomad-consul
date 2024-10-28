@@ -3,9 +3,11 @@ package hashi
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"gotooling/johnhardy.io/pkg/utils"
@@ -24,6 +26,113 @@ type JobDeployMonitorCompleted func(*JobDeployMonitor, *nomad.Deployment)
 var (
 	defaultEvalWait time.Duration = 250 * time.Millisecond
 )
+
+type JobTask struct {
+	Namespace string
+	Job       string
+	Task      string
+}
+
+type JobTaskAlloc struct {
+	Namespace string
+	Job       string
+	Task      string
+	AllocID   string
+	Host      string
+}
+
+func DistinctTaskByStates(states []string, jobs []*JobSelect) map[string]*JobTask {
+	m := make(map[string]*JobTask)
+
+	for _, v := range jobs {
+		for _, vv := range v.Allocs {
+			for taskName, vvv := range vv.TaskStates {
+				if !utils.StrInArray(vvv.State, states) {
+					continue
+				}
+				key := fmt.Sprintf("%s.%s.%s", v.Stub.Namespace, v.Stub.ID, taskName)
+				m[key] = &JobTask{
+					Namespace: v.Stub.Namespace,
+					Job:       v.Stub.ID,
+					Task:      taskName,
+				}
+			}
+		}
+	}
+
+	return m
+}
+
+func FilterTaskAllocsByStates(states []string, jobs []*JobSelect) map[string]*JobTaskAlloc {
+	m := make(map[string]*JobTaskAlloc)
+
+	for _, v := range jobs {
+
+		jobID := strings.Replace(v.Stub.ID, ".", "-", -1)
+		ns := strings.Replace(v.Stub.Namespace, ".", "-", -1)
+
+		for _, vv := range v.Allocs {
+
+			host := vv.NodeName
+
+			for taskName, vvv := range vv.TaskStates {
+				st := vvv.State
+				if utils.StrInArray(st, states) {
+					mapKey := fmt.Sprintf("%s.%s.%s", ns, jobID, taskName)
+					m[mapKey] = &JobTaskAlloc{
+						Namespace: v.Stub.Namespace,
+						Job:       v.Stub.ID,
+						Task:      taskName,
+						AllocID:   vv.ID,
+						Host:      host,
+					}
+				}
+			}
+		}
+	}
+
+	return m
+}
+
+func IsInJobTasks(namespace, jobId, task string, jts []*JobTask) bool {
+  
+  for _, v := range jts {
+    nsChk := v.Namespace == namespace
+    jobIdChk := v.Job == jobId
+    taskChk := v.Task == task
+
+    if nsChk && jobIdChk && taskChk {
+      return true
+    }
+
+  }
+
+
+  return false
+}
+
+func FilterJobSelectByStateAndTask(states []string, jts []*JobTask, jobs []*JobSelect) []*JobTaskAlloc {
+  r := make([]*JobTaskAlloc, 0)
+
+  for _, v := range jobs {
+    for _, vv := range v.Allocs {
+      for taskName, vvv := range vv.TaskStates {
+        jobTaskChk := IsInJobTasks(v.Stub.Namespace, v.Stub.ID, taskName, jts)
+        if jobTaskChk && utils.StrInArray(vvv.State, states) {
+          r = append(r, &JobTaskAlloc{
+            Namespace: v.Stub.Namespace,
+            Job: v.Stub.ID,
+            AllocID: vv.ID,
+            Task: taskName, 
+            Host: vv.NodeName,
+          })
+        }
+      }
+    }
+  }
+
+  return r
+}
 
 /*
 nomad deployment status vars

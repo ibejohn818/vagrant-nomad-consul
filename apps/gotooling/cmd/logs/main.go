@@ -2,56 +2,51 @@ package main
 
 import (
 	"context"
-	"errors"
 	"flag"
 	"fmt"
+	"gotooling/johnhardy.io/pkg/cli"
 	"gotooling/johnhardy.io/pkg/hashi"
 	"gotooling/johnhardy.io/pkg/utils"
+	"io"
 	"log"
 	"os"
 	"os/signal"
 	"sort"
-	"strings"
+	"sync"
 	"syscall"
 
 	"github.com/AlecAivazis/survey/v2"
 	nomad "github.com/hashicorp/nomad/api"
 )
 
-type listFlag []string
-
-func (l *listFlag) String() string {
-	return strings.Join(*l, ", ")
-}
-
-func (l *listFlag) Set(val string) error {
-	if len(*l) >= 2 {
-		return errors.New("too many values")
-	}
-
-	if !utils.StrInArray(val, []string{"stderr", "stdout"}) {
-		return errors.New("invalid value!")
-	}
-
-	*l = append(*l, val)
-
-	return nil
-}
-
 var (
-	sources listFlag = make([]string, 0)
-	follow  bool     = false
-	saveTo  string   = "/tmp/logs"
-	ns      listFlag = make([]string, 0)
+	sources   cli.ListFlag = make([]string, 0)
+	follow    bool         = false
+	saveTo    string
+	ns        cli.ListFlag = make([]string, 0)
+	taskHosts bool         = false
+	out       string       = "stderr"
+	offset    int64        = 0
+	origin    string
+	output    string = "stderr"
 )
 
 const usage = `
   -f, --follow  follow the log stream
-  -t, --type  where to get logs, can be "stderr" or "stdout" 
+  --origin 		where to pace the cursor when starting to read the log stream,
+				(valid: "start" or "end") (default: "end" if --follow and "start" if !--follow)
+  --offset 		line offset to place cursor relative to --origin (default: 0)
+  -o, --out 	output log stream to tty, ("stderr" or "stdout", default: "stderr")
+				(NOTE: only valid if --follow flag is set)
+  -t, --type    logs source, can be "stderr" or "stdout" 
                 (use option multiple times for both, default: stderr)
-  -s, --save    dir path to save logs, (will create path if not present),
+  -s, --save    dir path to save logs, each stream will create a file, path will be created
+                (NOTE: empty value omits writing logs to file)
+  -n, --ns      nomad namespace(s) to query, (set multiple times for multiple namespaces)
+				(default: "default")
+  --hostFilter  flag to enable hostname filter in selection wizard
+				(default: selected tasks include all hosts)
                 (TODO: not yet implemented)
-  -n, --ns      namespace(s) to query, (set multiple times for multiple namespaces)
 
 EXAMPLE - Multiple namespaces:
   {CMD} -n default --ns system --ns utils
@@ -59,14 +54,22 @@ EXAMPLE - Multiple namespaces:
 
 func init() {
 
+	flag.StringVar(&origin, "origin", "", "")
+	flag.Int64Var(&offset, "offset", 0, "")
+
 	flag.Var(&sources, "type", "either 'stdout' or 'stderr' (can set this option multiple times)")
 	flag.Var(&sources, "t", "either 'stdout' or 'stderr' (can set this option multiple times)")
+
+	flag.Var(&ns, "n", "")
+	flag.Var(&ns, "ns", "")
 
 	flag.BoolVar(&follow, "follow", false, "stream and follow logs?")
 	flag.BoolVar(&follow, "f", false, "stream and follow logs?")
 
-	flag.StringVar(&saveTo, "save", "/tmp/logs", fmt.Sprintf("dir path to save logs (dir will be created, default: %s)", saveTo))
-	flag.StringVar(&saveTo, "s", "/tmp/logs", fmt.Sprintf("dir path to save logs (dir will be created, default: %s)", saveTo))
+	flag.BoolVar(&taskHosts, "hostFilter", false, "filter tasks hostname? (default: selected tasks include all hosts)")
+
+	flag.StringVar(&saveTo, "save", "", fmt.Sprintf("dir path to save logs (dir will be created, default: %s)", saveTo))
+	flag.StringVar(&saveTo, "s", "", fmt.Sprintf("dir path to save logs (dir will be created, default: %s)", saveTo))
 
 }
 
@@ -79,15 +82,64 @@ func main() {
 		sources.Set("stderr")
 	}
 
+	// check origin value
+	if len(origin) <= 0 {
+		if follow {
+			origin = "end"
+		} else {
+			origin = "start"
+		}
+	}
+
+	if !utils.StrInArray(origin, []string{"start", "end"}) {
+		log.Fatalln("--origin can only be 'start' or 'end'")
+	}
+
+	if !utils.StrInArray(output, []string{"stderr", "stdout"}) {
+		log.Fatalln("--out can only be 'stderr' or 'stdout'")
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	client := hashi.NomadClient()
 	jobsc := client.Jobs()
 
+	// select {namespace}.{job}
 	jobStubs := nomadSelectJob(jobsc)
 
 	selectedJobs := getSelectedJobs(jobsc, jobStubs)
+
+	distinctStates := getDistinctTaskStatuses(selectedJobs)
+
+	var states []string
+	if len(distinctStates) <= 1 {
+		states = []string{distinctStates[0]}
+	} else {
+		states = selectTaskStates(distinctStates)
+	}
+
+	fmt.Printf("Selected states: %v \n", states)
+
+	// TODO: option to filter all allocation tasks by hostname
+	// taskAllocMap := hashi.FilterTaskAllocsByStates(states, selectedJobs)
+	// spew.Dump(taskAllocMap)
+
+	// right now, get all tasks that match selected state,
+	taskMap := hashi.DistinctTaskByStates(states, selectedJobs)
+	selectedTasks := selectTasks(taskMap)
+
+	// spew.Dump("Selected Tasks: ", selectedTasks)
+
+	selectedAllocs := hashi.FilterJobSelectByStateAndTask(states, selectedTasks, selectedJobs)
+
+  if len(selectedAllocs) <= 0 {
+    log.Println("no allocations selected, exiting ...") 
+    return
+  }
+
+	log.Printf("%d selected allocation(s)", len(selectedAllocs))
+
 
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
@@ -106,16 +158,54 @@ func main() {
 		}
 	}()
 
-	config := hashi.StreamLogsConfig{
-    LogType: sources,
-    Follow: follow,
-  }
+	// spew.Dump("selectedJobs", selectedJobs)
 
-	streamer := hashi.NewStreamLogs(client, selectedJobs, &config)
+	var streamOutput io.Writer
+	switch output {
+	case "stderr":
+		streamOutput = os.Stderr
+		break
+	case "stdout":
+		streamOutput = os.Stdout
+	}
+
+	config := hashi.StreamLogsConfig{
+		LogType:      sources,
+		Follow:       follow,
+		StreamWaiter: new(sync.WaitGroup),
+		StreamOutput: streamOutput,
+		SavePath:     saveTo,
+		Origin:       origin,
+		OriginOffset: offset,
+	}
+
+	logWriters, writersErr := hashi.NewLogWriters(&config)
+	if writersErr != nil {
+		log.Fatalf("error creating writers: %v", writersErr)
+	}
+	streamer := hashi.NewStreamLogs(client, selectedAllocs, &config, logWriters)
 
 	go streamer.Run(ctx)
 
 	<-ctx.Done()
+}
+
+func getDistinctTaskStatuses(jobs []*hashi.JobSelect) []string {
+
+	r := make([]string, 0)
+
+	for _, v := range jobs {
+		for _, vv := range v.Allocs {
+			for _, vvv := range vv.TaskStates {
+				st := vvv.State
+				if !utils.StrInArray(st, r) {
+					r = append(r, st)
+				}
+			}
+		}
+	}
+
+	return r
 }
 
 func getSelectedJobs(c hashi.NomadJobs, stubs []*nomad.JobListStub) []*hashi.JobSelect {
@@ -124,10 +214,11 @@ func getSelectedJobs(c hashi.NomadJobs, stubs []*nomad.JobListStub) []*hashi.Job
 
 	for _, v := range stubs {
 
-		aops := &nomad.QueryOptions{
+		qops := &nomad.QueryOptions{
 			Namespace: v.Namespace,
 		}
-		allocs, _, allocsErr := c.Allocations(v.ID, false, aops)
+
+		allocs, _, allocsErr := c.Allocations(v.ID, false, qops)
 		if allocsErr != nil {
 			continue
 		}
@@ -190,4 +281,51 @@ func nomadSelectJob(jc hashi.NomadJobs) []*nomad.JobListStub {
 	}
 
 	return res
+}
+
+func selectTaskStates(states []string) []string {
+
+	var askRes []string
+
+	sort.Slice(states, func(a, b int) bool {
+		return states[a] < states[b]
+	})
+
+	sel := survey.MultiSelect{
+		Message: "Select task states",
+		Options: states,
+	}
+
+	survey.AskOne(&sel, &askRes, survey.WithPageSize(15))
+
+	return askRes
+}
+
+func selectTasks(jt map[string]*hashi.JobTask) []*hashi.JobTask {
+	r := make([]*hashi.JobTask, 0)
+	keys := jobTaskKeys(jt)
+	askRes := make([]string, 0)
+
+	sel := survey.MultiSelect{
+		Message: "Select task states",
+		Options: keys,
+	}
+
+	survey.AskOne(&sel, &askRes, survey.WithPageSize(15))
+
+	for _, v := range askRes {
+		sjt := jt[v]
+		r = append(r, sjt)
+	}
+
+	return r
+}
+
+func jobTaskKeys(jt map[string]*hashi.JobTask) []string {
+	r := make([]string, 0)
+
+	for k := range jt {
+		r = append(r, k)
+	}
+	return r
 }

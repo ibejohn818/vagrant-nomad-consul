@@ -7,7 +7,10 @@ import (
 	"log"
 	"os"
 	"strings"
+	"sync"
 	"time"
+
+	"github.com/pkg/errors"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/hashicorp/nomad/api"
@@ -19,75 +22,197 @@ type JobSelect struct {
 }
 
 type LogPayload struct {
-	alloc    *api.Allocation
-	taskName string
-	frame    *api.StreamFrame
-	logType  string
+	frame        *api.StreamFrame
+	logType      string
+	jobTaskAlloc *JobTaskAlloc
+	writers      []io.Writer
 }
 
-func NewStreamLogs(client *api.Client, j []*JobSelect, config *StreamLogsConfig) *StreamLogs {
+type StreamLogs struct {
+	allocs        []*JobTaskAlloc
+	outputCh      chan *LogPayload
+	nomadAllocFS  NomadAllocFS
+	nomadAllocs   NomadAllocations
+	allocCache    map[string]*api.Allocation
+	output        io.Writer
+	config        *StreamLogsConfig
+	globalCancel  chan struct{}
+	outputStreams LogStreamIO
+}
+
+func NewStreamLogs(client *api.Client, j []*JobTaskAlloc, config *StreamLogsConfig, outputStreams LogStreamIO) *StreamLogs {
 	s := StreamLogs{
-		jobs:         j,
-		outputCh:     make(chan *LogPayload),
-		nomadAllocFS: client.AllocFS(),
-		nomadAllocs:  client.Allocations(),
-		allocCache:   make(map[string]*api.Allocation),
-		output:       os.Stderr,
-		config:       config,
+		allocs:        j,
+		outputCh:      make(chan *LogPayload),
+		nomadAllocFS:  client.AllocFS(),
+		nomadAllocs:   client.Allocations(),
+		allocCache:    make(map[string]*api.Allocation),
+		output:        os.Stderr,
+		config:        config,
+		globalCancel:  make(chan struct{}),
+		outputStreams: outputStreams,
 	}
 
 	return &s
 }
 
+type LogStreamIO interface {
+	GetStreams(jta *JobTaskAlloc, logSrc string) []io.Writer
+}
+
+type LogWriters struct {
+	globalWriters []io.Writer
+	savePath      string
+	fileRefs      sync.Map // key: filePath => *os.File
+}
+
+func (l *LogWriters) ensureFileDescriptor(savePath string) (io.Writer, error) {
+
+	var writer io.Writer
+
+	if fdRaw, chk := l.fileRefs.Load(savePath); chk {
+		writer = fdRaw.(*os.File)
+	} else {
+		fd, err := os.Create(savePath)
+		if err != nil {
+			return nil, err
+		}
+
+		l.fileRefs.Store(savePath, fd)
+		writer = fd
+	}
+
+	return writer, nil
+}
+
+func (l *LogWriters) GetStreams(jta *JobTaskAlloc, logSrc string) []io.Writer {
+	s := make([]io.Writer, 0)
+
+	// get/set/cache file descriptor
+	if len(l.savePath) > 0 {
+		//  create filename and path
+		allocID := strings.SplitN(jta.AllocID, "-", 1)[0]
+		fn := fmt.Sprintf("%s.%s.%s.%s.%s.%s.log",
+			jta.Host, allocID, jta.Namespace, jta.Job, jta.Task, logSrc)
+		fullPath := fmt.Sprintf("%s/%s", l.savePath, fn)
+
+		// ensure that the file descriptor is created
+		fileWriter, err := l.ensureFileDescriptor(fullPath)
+
+		if err != nil {
+			log.Printf("unable to ensure path: %s, error: %s", fullPath, err.Error())
+		}
+
+		if fileWriter != nil {
+			s = append(s, fileWriter)
+		}
+
+	}
+
+	for _, wr := range l.globalWriters {
+		s = append(s, wr)
+	}
+
+	return s
+}
+
+func (l *LogWriters) CloseAll() {
+	l.fileRefs.Range(func(_, rawFd any) bool {
+		fd := rawFd.(*os.File)
+		fd.Close()
+		return true
+	})
+}
+
+func NewLogWriters(c *StreamLogsConfig) (*LogWriters, error) {
+	l := LogWriters{}
+
+	if len(c.SavePath) > 0 {
+		l.savePath = c.SavePath
+		savePathErr := l.ensureSavePath()
+		if savePathErr != nil {
+			return nil, savePathErr
+		}
+	}
+
+	ws := make([]io.Writer, 0)
+
+	if c.StreamOutput != nil {
+		ws = append(ws, c.StreamOutput)
+	}
+
+	l.globalWriters = ws
+
+	return &l, nil
+}
+
+func (l *LogWriters) ensureSavePath() error {
+	err := os.MkdirAll(l.savePath, 0755)
+	if err != nil {
+		if !errors.Is(err, os.ErrExist) {
+			return err
+		}
+	}
+
+	return nil
+}
+
 type StreamLogsConfig struct {
+	// Follow keep stream open while writing to io.Writer's
 	Follow bool
-	// Origin is either "start" or "end"
+	// Origin where in the log stream to start (values: "start" or "end")
 	Origin string
+	// OriginOffset move cursor in the stream buffer to the offset of `Origin`
+	OriginOffset int64
 	// Source "stdout" or "stderr"
-	LogType []string
-	SaveDir string
+	LogType      []string
+	SavePath     string
+	StreamOutput io.Writer
+	StreamWaiter *sync.WaitGroup
 }
 
-type StreamLogs struct {
-	jobs         []*JobSelect
-	outputCh     chan *LogPayload
-	nomadAllocFS NomadAllocFS
-	nomadAllocs  NomadAllocations
-	allocCache   map[string]*api.Allocation
-	output       io.Writer
-	config       *StreamLogsConfig
+func (l *StreamLogs) watchDog(ctx context.Context) {
+	for ctx.Err() == nil {
+		<-time.After(1 * time.Second)
+	}
 }
 
-func (l *StreamLogs) startStream(ctx context.Context, logType, namespace, allocID, taskName string) {
+// FIXME: this can use some refactoring of the []io.Writers and *LogPayload handling
+func (l *StreamLogs) startStream(ctx context.Context, logType string, jta *JobTaskAlloc) {
 
-	alloc := l.getAlloc(namespace, allocID)
+	alloc := l.getAlloc(jta.Namespace, jta.AllocID)
 
-	// spew.Dump(alloc.ID)
+	spew.Dump("AllocID: ", alloc.ID)
 
+	// FIXME: centralize cancel chan in parent dereferenced struct
 	cancelStream := make(chan struct{})
 
 	ops := api.QueryOptions{
-		Namespace:  namespace,
-		AllowStale: true,
+		Namespace: jta.Namespace,
+		// TODO: parameterize
+		// AllowStale: true,
 	}
 
-	stream, streamErr := l.nomadAllocFS.Logs(alloc, l.config.Follow, taskName, logType, "end", 0, cancelStream, &ops)
+	// get io.Writers
+	writers := l.outputStreams.GetStreams(jta, logType)
+
+	stream, streamErr := l.nomadAllocFS.Logs(alloc, l.config.Follow, jta.Task, logType, "end", 0, cancelStream, &ops)
 
 	for {
 		select {
 		case logErr := <-streamErr:
-			log.Printf("logs error, task: %s, error: %s", taskName, logErr.Error())
-			return
+			log.Printf("logs error, task: %s, error: %s", jta.Task, logErr.Error())
 		case frame := <-stream:
 			if frame == nil {
 				continue
 			}
 
+			// send to the output handler
 			l.outputCh <- &LogPayload{
-				alloc:    alloc,
-				frame:    frame,
-				taskName: taskName,
-				logType:  logType,
+				frame:        frame,
+				jobTaskAlloc: jta,
+				logType:      logType,
+				writers:      writers,
 			}
 			break
 		case <-ctx.Done():
@@ -120,18 +245,21 @@ func (l *StreamLogs) outputHandler(ctx context.Context) {
 	for {
 		select {
 		case payload := <-l.outputCh:
-			id := strings.Split(payload.alloc.ID, "-")[0]
-			hn := payload.alloc.NodeName
-			jn := payload.alloc.JobID
+			id := strings.Split(payload.jobTaskAlloc.AllocID, "-")[0]
+			hn := payload.jobTaskAlloc.Host
+			jn := payload.jobTaskAlloc.Job
 			lt := payload.logType
-      tn := payload.taskName
+			tn := payload.jobTaskAlloc.Task
 
 			lines := strings.Split(string(payload.frame.Data), "\n")
 
 			for _, ln := range lines {
 				ts := time.Now().Format(time.RFC3339)
-				line := fmt.Sprintf("[%s][allocID:%s][host:%s][job:%s][task:%s][%s] - %s\n", ts, id, hn, jn, tn, lt, ln)
-				l.output.Write([]byte(line))
+				prefix := fmt.Sprintf("[%s][allocID:%s][host:%s][job:%s][task:%s][%s]", ts, id, hn, jn, tn, lt)
+				line := fmt.Sprintf("%s - %s\n", prefix, ln)
+        for _, wr := range payload.writers {
+          wr.Write([]byte(line))
+        }
 			}
 			break
 		case <-ctx.Done():
@@ -143,16 +271,13 @@ func (l *StreamLogs) outputHandler(ctx context.Context) {
 
 func (l *StreamLogs) Run(ctx context.Context) {
 
-	for _, js := range l.jobs {
-		for _, al := range js.Allocs {
-			for taskName, st := range al.TaskStates {
-				if strings.ToLower(st.State) == "running" {
-					for _, logType := range l.config.LogType {
-						spew.Dump(logType)
-						go l.startStream(ctx, logType, js.Stub.Namespace, al.ID, taskName)
-					}
-				}
-			}
+	// start watch dog
+	// FIXME: needs implementation
+	// go l.watchDog(ctx)
+
+	for _, jta := range l.allocs {
+		for _, logType := range l.config.LogType {
+			go l.startStream(ctx, logType, jta)
 		}
 	}
 

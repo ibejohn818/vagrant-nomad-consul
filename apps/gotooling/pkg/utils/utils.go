@@ -11,3 +11,13 @@ func StrInArray(s string, a []string) bool {
 
   return false
 }
+
+func MapKeys(m map[string]*any) []string {
+  r := make([]string, 0)
+
+  for k := range m {
+    r = append(r, k)
+  } 
+
+  return r
+}

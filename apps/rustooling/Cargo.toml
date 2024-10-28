@@ -6,5 +6,7 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.89"
 clap = { version = "4.5.20", features = ["derive", "string", "env"] }
+crossbeam = { version = "0.8.4", features = ["crossbeam-channel", "crossbeam-queue"] }
+rayon = "1.10.0"
 rust-ini = "0.21.1"
 ssh2 = "0.9.4"
