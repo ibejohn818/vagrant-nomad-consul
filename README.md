@@ -105,8 +105,23 @@ TODO: Need to write
 
 
 ## Nomad job examples
+Nomad job examples reside in: `jobs/`.   
+```shell
+# source nomad env vars
+source scripts/nomad.env
 
- - TODO: Complete example docs
+# execute a ingres job
+cd jobs && nomad job run ingress.hcl
+```
+ - TODO: Complete example jobs doc
+
+## Tooling
+#### `apps/gotooling` - golang tooling
+    - `cmd/logs` - select job allocations logs to stream concurrently and/or write to file
+    - `cmd/dev` - deploy and monitor multiple HCL's concurrently
+
+#### `apps/rustooling`
+    
 
 ### TODO
 
