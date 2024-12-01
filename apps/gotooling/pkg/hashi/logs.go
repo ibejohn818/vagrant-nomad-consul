@@ -196,7 +196,8 @@ func (l *StreamLogs) startStream(ctx context.Context, logType string, jta *JobTa
 	// get io.Writers
 	writers := l.outputStreams.GetStreams(jta, logType)
 
-	stream, streamErr := l.nomadAllocFS.Logs(alloc, l.config.Follow, jta.Task, logType, "end", 0, cancelStream, &ops)
+	stream, streamErr := l.nomadAllocFS.Logs(
+    alloc, l.config.Follow, jta.Task, logType, l.config.Origin, 0, cancelStream, &ops)
 
 	for {
 		select {
@@ -257,9 +258,9 @@ func (l *StreamLogs) outputHandler(ctx context.Context) {
 				ts := time.Now().Format(time.RFC3339)
 				prefix := fmt.Sprintf("[%s][allocID:%s][host:%s][job:%s][task:%s][%s]", ts, id, hn, jn, tn, lt)
 				line := fmt.Sprintf("%s - %s\n", prefix, ln)
-        for _, wr := range payload.writers {
-          wr.Write([]byte(line))
-        }
+				for _, wr := range payload.writers {
+					wr.Write([]byte(line))
+				}
 			}
 			break
 		case <-ctx.Done():

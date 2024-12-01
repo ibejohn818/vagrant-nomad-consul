@@ -10,6 +10,7 @@ require (
 	github.com/hashicorp/consul/api v1.29.2
 	github.com/hashicorp/nomad v1.8.3
 	github.com/hashicorp/nomad/api v0.0.0-20240822174328-36522ec6320b
+	github.com/manifoldco/promptui v0.9.0
 	github.com/pkg/errors v0.9.1
 )
 
@@ -20,6 +21,7 @@ require (
 	github.com/apparentlymart/go-textseg/v15 v15.0.0 // indirect
 	github.com/armon/go-metrics v0.5.3 // indirect
 	github.com/bmatcuk/doublestar v1.1.5 // indirect
+	github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e // indirect
 	github.com/fatih/color v1.17.0 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect

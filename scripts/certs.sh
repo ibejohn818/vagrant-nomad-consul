@@ -85,8 +85,6 @@ mkdir -p "${save_path}"
 
 function gen_ca() {
 
-  # check if cert exist
-  #
   openssl req -x509 -newkey rsa:4096 -sha256 -days ${EXP_DAYS} \
     -nodes -keyout "${ca_key}" -out "${ca}" -subj "/C=US/ST=CA/O=Lab/OU=Engineering/CN=Lab\ ${CERT_TYPE}\ CA" \
     -addext "subjectAltName=DNS:${CERT_TYPE},DNS:localhost,IP:127.0.0.1" \
@@ -95,18 +93,17 @@ function gen_ca() {
 }
 
 
-function gen_csr() {
-  
+
+function gen_cert() {
+
+# csr
 openssl x509 -req -days 3650 \
   -in consul/server.csr \
   -copy_extensions copy \
   -CA consul-ca.pem -CAkey consul-ca-key.pem -CAcreateserial \
   -out consul/server.pem
-}
 
-function gen_cert() {
-
-# consul client
+# cert
 openssl req -new -newkey rsa:4096 -nodes  \
     -subj "/C=US/ST=CA/O=Lab/OU=Engineering/CN=Lab Consul" \
     -keyout  consul/client-key.pem \

@@ -176,7 +176,7 @@ Vagrant.configure("2") do |config|
 
 
       machine[:shared].each do |share|
-        FileUtils.mkdir_p(share.host) unless File.exists?(share.host)
+        FileUtils.mkdir_p(share.host) unless File.exist?(share.host)
         node.vm.synced_folder share.host, share.vm
       end
 
@@ -189,7 +189,7 @@ Vagrant.configure("2") do |config|
       # end
 
 
-    # to speed up ansible, only run ansible during the final machines provisioning
+    # only run ansible during the final machines provisioning
     if machine[:hostname] == last_hostname
       node.vm.provision "ansible" do |a|
           a.playbook = "ansible/vagrant.yml"
