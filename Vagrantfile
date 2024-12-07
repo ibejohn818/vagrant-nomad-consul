@@ -2,7 +2,6 @@
 # vi: set ft=ruby :
 
 require 'pp'
-require 'os'
 # require 'FileUtils'
 
 Shared = Struct.new(:host, :vm)
@@ -18,9 +17,7 @@ defaults = {
   # :shared => [add list of dedicated Shared dirs]
 }
 
-if OS.mac 
   defaults[:box] = "ibejohn818/debian-bookworm"
-end
 
 shared_global = [
   Shared.new("./shared/global", "/vagrant/global")
