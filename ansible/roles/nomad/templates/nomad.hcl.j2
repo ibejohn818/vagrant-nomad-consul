@@ -59,18 +59,16 @@ plugin "docker" {
   }
 }
 
-/*
-plugin "nomad-driver-podman" {
-  config {
-      {% if podman_sock_path is not none %}
-      socket_path = "unix://{{ podman_sock_path }}"
-      {% endif %}
-      volumes {
-        enabled = true
-      }
-  }
-}
-*/
+# plugin "nomad-driver-podman" {
+#   config {
+#       {% if podman_sock_path is not none %}
+#       socket_path = "unix://{{ podman_sock_path }}"
+#       {% endif %}
+#       volumes {
+#         enabled = true
+#       }
+#   }
+# }
 
 {% endif %}
 

@@ -1,11 +1,15 @@
 ---
+- name: Get DEB architecture
+  shell: dpkg --print-architecture
+  register: deb_arch
+
 - name: add docker gpg
   shell:
     cmd: curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
 
 - name: add docker repo
   ansible.builtin.apt_repository:
-    repo: deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian bookworm stable
+    repo: "deb [arch={{ deb_arch.stdout }} signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian bookworm stable"
     state: present
     filename: docker
 

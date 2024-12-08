@@ -31,3 +31,8 @@
 - name: set hostname
   shell:
     cmd: "hostnamectl set-hostname {{ inventory_hostname }}"
+
+- name: copy /etc/hosts
+  template:
+    src: "hosts.j2"
+    dest: /etc/hosts

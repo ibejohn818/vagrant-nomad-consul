@@ -10,7 +10,7 @@
     state: directory
     path: "{{ item }}"
   with_items:
-    - /etc/consuld.
+    - /etc/consul.d
     - /var/log/consul
 
 - name: copy certs

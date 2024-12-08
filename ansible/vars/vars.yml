@@ -7,7 +7,7 @@ nomad_datacenter: "global"
 nomad_client_total_memory: 32000
 nomad_client_total_cpu_mhz: 32000
 nomad_podman_plugin_url: "https://releases.hashicorp.com/nomad-driver-podman/0.5.2/nomad-driver-podman_0.5.2_linux_amd64.zip"
-nomad_bootstrap_expect: 3
+nomad_bootstrap_expect: 2
 nomad_encrypt_key: "5iy0jYaeCPZCSNnweHtsdpme4DOU+0cIyxtilb8mqSI="
 nomad_tls_files:
   - nomad-ca.pem
@@ -35,7 +35,6 @@ consul_datacenter: "dc1"
 consul_retry_join:
   - 192.168.60.14
   - 192.168.60.15
-  - 192.168.60.16
-consul_bootstrap_expect: 3
+consul_bootstrap_expect: 2
 podman_sock_path: "/var/run/podman/podman.sock"
 

@@ -17,7 +17,9 @@ defaults = {
   # :shared => [add list of dedicated Shared dirs]
 }
 
-  defaults[:box] = "ibejohn818/debian-bookworm"
+  # defaults[:box] = "ibejohn818/debian-bookworm"
+  # defaults[:box] = "bento/ubuntu-22.04"
+  defaults[:box] = "debian-12-arm64"
 
 shared_global = [
   Shared.new("./shared/global", "/vagrant/global")
@@ -25,7 +27,7 @@ shared_global = [
 
 # this hostname should be last in the array of server configs,
 # ansible provisioner will run on this hostname on all hosts vs sequentially
-last_hostname = "data02"
+last_hostname = "app02"
 
 # nomad_consul will run nomad & consul server on the same machines to lower box count
 server_clusters = { 
@@ -71,23 +73,23 @@ server_clusters = {
   ],
   :nomad_consul => [
     {
-      :hostname => "nomad_consul01",
+      :hostname => "nomadconsul01",
       :ip => "192.168.60.14",
       :ram => 1024,
       :cpus => 2,
     },
     {
-      :hostname => "nomad_consul02",
+      :hostname => "nomadconsul02",
       :ip => "192.168.60.15",
       :ram => 1024,
       :cpus => 2,
     },
-    {
-      :hostname => "nomad_consul03",
-      :ip => "192.168.60.16",
-      :ram => 1024,
-      :cpus => 2,
-    },
+    # {
+    #   :hostname => "nomad_consul03",
+    #   :ip => "192.168.60.16",
+    #   :ram => 1024,
+    #   :cpus => 2,
+    # },
   ]
 }
 
@@ -95,43 +97,38 @@ client_nodes = [
   { 
     :hostname => "app01",
     :ip => "192.168.60.21",
-    :box => "generic/debian12",
     :gui => false,
           },
   { 
     :hostname => "app02",
     :ip => "192.168.60.22",
-    :box => "generic/debian12",
     :gui => false,
-          },
-  { 
-    :hostname => "app03",
-    :ip => "192.168.60.23",
-    :box => "generic/debian12",
-    :gui => false,
-          },
-  { 
-    :hostname => "data01",
-    :ip => "192.168.60.31",
-    :box => "generic/debian12",
-    :gui => false,
-          },
-  { 
-    :hostname => "data02",
-    :ip => "192.168.60.32",
-    :box => "generic/debian12",
-    :gui => false,
-  }
+  },
+  # { 
+  #   :hostname => "app03",
+  #   :ip => "192.168.60.23",
+  #   :gui => false,
+  #         },
+  # { 
+  #   :hostname => "data01",
+  #   :ip => "192.168.60.31",
+  #   :gui => false,
+  #         },
+  # { 
+  #   :hostname => "data02",
+  #   :ip => "192.168.60.32",
+  #   :gui => false,
+  # }
 ]
 
 
 # create the list of servers
 
 # separate nomad & consul servers
-servers = server_clusters[:nomad] + server_clusters[:consul]
+# servers = server_clusters[:nomad] + server_clusters[:consul]
 
 # nomad & consul installed same server
-# servers = server_clusters[:nomad_consul]
+servers = server_clusters[:nomad_consul]
 
 # merge clients
 servers.concat(client_nodes)
@@ -166,6 +163,7 @@ Vagrant.configure("2") do |config|
       node.vm.box = machine[:box]
       # node.vm.base_address = machine[:ip]
       # node.vm.network :private_network, ip: machine[:ip]
+      # node.vm.network :public_network
       node.vm.network "private_network", ip: machine[:ip]
       node.vm.provision "shell", inline: <<-SHELL
         # Fix hostname
@@ -197,26 +195,25 @@ Vagrant.configure("2") do |config|
           a.playbook = "ansible/vagrant.yml"
           a.limit = "all"
           a.groups = {
-            # "nomad_consul_servers" => ["nomad_consul0[1:3]"],
-            "nomad_server" => ["nomad0[1:3]"],
-            "consul_server" => ["consul0[1:3]"],
-            "app" => ["app0[1:3]"],
-            "data" => ["data0[1:2]"],
+            "nomad_consul_servers" => ["nomadconsul0[1:2]"],
+            # "nomad_server" => ["nomad0[1:3]"],
+            # "consul_server" => ["consul0[1:3]"],
+            "app" => ["app0[1:2]"],
+            # "data" => ["data0[1:2]"],
             "app:vars" => {"nomad_client_node_class" => "app"},
-            "data:vars" => {"nomad_client_node_class" => "data"}
+            # "data:vars" => {"nomad_client_node_class" => "data"}
           }
       end
     end
 
  
-      node.vm.provider "vmware_desktop" do |v|
-        # v.nat_device = "vmnet2"
-        v.memory = machine[:memory]
+      node.vm.provider :vmware_desktop do |v|
+        v.memory = machine[:ram]
         v.cpus = machine[:cpu]
-        v.gui = true
+        # v.gui = true
       end
 
-      node.vm.provider "virtualbox" do |vb|
+      node.vm.provider :virtualbox do |vb|
         vb.gui = machine[:gui]
         vb.memory = machine[:ram]
         vb.cpus = machine[:cpus]
