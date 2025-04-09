@@ -94,7 +94,7 @@ EOH
                mount {
                   type = "bind"
                   target = "/data"
-                  source = "/vagrant/data/grafana"
+                  source = "/vagrant/data"
                   readonly = false
                 }
             }

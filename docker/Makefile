@@ -2,7 +2,7 @@
 REPO ?= ibejohn818/nomad-consul-vagrant
 
 PLATFORM ?= linux/amd64
-REGISTRY ?= registry.vagrant.local
+REGISTRY ?= registry.service.dc1.consul
 TAG ?= latest
 
 .PHONY: postgres

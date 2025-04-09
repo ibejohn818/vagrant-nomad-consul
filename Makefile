@@ -1,6 +1,9 @@
 DOCKER_REPO ?= ibejohn818/nomad-consul-vagrant
 
-docker-generate-certs:
+build-openssl-image:
+	$(MAKE) -C docker build-openssl
+
+docker-generate-certs: build-openssl-image
 	docker run --rm -it \
 		--user $(shell id -u):$(shell id -g) \
 		-v /etc/passwd:/etc/passwd:ro \

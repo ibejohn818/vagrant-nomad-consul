@@ -1,17 +1,24 @@
 ## Vagrant - Nomad + Consul
 
-Run a local HA nomad + consul server cluster with client nodes.
+>NOTE: For linux + virtualbox use branch: `master`    
+>for `macos (apple silicon)` & `vmware-fusion` use branch:  `macos`    
 
-By default vagrant will setup 3 nomad & 3 consul server instances setup as HA cluster.   
-In addition to the nomad + consul servers, 5 nomad client instances will be created.   
+>NOTE: this is for local developement, please don't use this is production or public servers
+
+Run a local HA nomad + consul server cluster with nomad client nodes running docker.
+
+Options are embedded in the `Vagrantfile` to change/add server topology. 
+By default a 3 + 3 nomad & consul server cluster is created + 3 `app` clients and 2 `data` clients for a total of 10 VM's.
+
 
 Server OS is `debian:12` and all services are configured VIA `ansible`.
+By default the ansible provisioner will execute on the last vagrant instance to enable ansible group provisioning (see `Vagrantfile`)
 
 ## requirements
-NOTE: tested on ubuntu & debian desktop 
+NOTE: `master` tested on ubuntu & debian desktop, `macos` branch tested on  `macos sequioa` 
 
 * vagrant
-* hypervisor (IE: virtualbox (tested) | vmware (vagrant plugin errors prevented testing) )
+* hypervisor (linux: `virtualbox`, macos: `vmware-fusion` w/vagrant vmware plugin )
 * docker
 * ansible 
 
@@ -20,9 +27,41 @@ For terminal access, install the `nomad` & `consul` cli binaries.
 * nomad: https://developer.hashicorp.com/nomad/docs/install
 * consul: https://developer.hashicorp.com/consul/docs/install
 
-I also suggest running `dnsmasq` on the host machine to enable consul DNS resolution. (IE: {SERVICE-NAME}.service.dc1.consul)  
-A configuration fragment for `dnsmasq` is located at `conf/dnsmasq.d/00-consul.conf`
+It's highly recomended to run `dnsmasq` (or any DNS forwarder) on the host machine to enable consul DNS resolution.    
+(IE: `{SERVICE-NAME}.service.dc1.consul`)  
+A configuration fragment for `dnsmasq` is located in this repo at `conf/dnsmasq.d/00-consul.conf`
 
+## Nomad jobs
+
+Some nomad jobs are ready to be deployed.
+* ingress - traefik proxy wired to consul service discovery
+  * DNS: traefik.service.dc1.consul
+* registry - docker registry
+  * DNS: registry.service.dc1.consul
+* prometheus - prometheus server scraping nomad clients & servers
+  * DNS: prometheus.service.dc1.consul
+* grafana - grafana instances to view prometheus metrics
+  * DNS: grafana.service.dc1.consul   
+
+
+
+## Starting the cluster (WIP)
+
+1. Generate tls certificates
+```shell
+make docker-generate-certs
+```
+2. Launch Vagrant vm's
+```shell
+vagrant up
+```
+3. Push tls certificates to consul KV store
+```shell
+scripts/consul-kv.sh
+```
+
+## messy notes below
+-----------
 
 ## Network
 Each instance will have a NAT nic to connect to the internet and a private network 

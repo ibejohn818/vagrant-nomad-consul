@@ -2,7 +2,6 @@
 # vi: set ft=ruby :
 
 require 'pp'
-require 'os'
 # require 'FileUtils'
 
 Shared = Struct.new(:host, :vm)
@@ -18,16 +17,12 @@ defaults = {
   # :shared => [add list of dedicated Shared dirs]
 }
 
-if OS.mac 
-  defaults[:box] = "ibejohn818/debian-bookworm"
-end
-
 shared_global = [
   Shared.new("./shared/global", "/vagrant/global")
 ]
 
 # this hostname should be last in the array of server configs,
-# ansible provisioner will run on this hostname on all hosts vs sequentially
+# ansible provisioner will trigger on this node to run in groups thus speeding up provisioning
 last_hostname = "data02"
 
 # nomad_consul will run nomad & consul server on the same machines to lower box count

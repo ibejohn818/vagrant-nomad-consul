@@ -23,6 +23,7 @@ nomad_consul_tls_files:
     dest: consul.pem
   - src: consul/client-key.pem
     dest: consul-key.pem
+# NOTE: excuse is we're local dev
 consul_encrypt_key: "X81wFZh3MkAgTHlq3OeNRqpmXrr1E4V6RYibWf9rxNI="
 consul_tls_files:
   - consul-ca.pem
