@@ -31,11 +31,11 @@
     src: "{{ tls_cert_path }}/{{ item.src }}"
   with_items: "{{ nomad_consul_tls_files }}"
 
-- name: download podman plugin
-  unarchive:
-    src: "{{ nomad_podman_plugin_url }}"
-    dest: /etc/nomad.d/plugins/
-    remote_src: true
+# - name: download podman plugin
+#   unarchive:
+#     src: "{{ nomad_podman_plugin_url }}"
+#     dest: /etc/nomad.d/plugins/
+#     remote_src: true
 
 - name: nomad config template
   template:

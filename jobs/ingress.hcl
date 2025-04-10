@@ -5,7 +5,6 @@ job "ingress" {
     type = "service"
     group "server" {
 
-        count = 5
         constraint {
             attribute = "${node.class}"
             operator="set_contains_any"

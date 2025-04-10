@@ -1,12 +1,12 @@
 variable "host_placement" {
   type = string
-  default = "app03"
+  default = ".*"
 }
 
 job "registry" {
     datacenters = ["global"]
     region = "dc1"
-    type = "service"
+    type = "system"
 
     constraint {
       attribute = "${node.class}"
@@ -16,7 +16,7 @@ job "registry" {
 
     constraint {
       attribute = "${attr.unique.hostname}"
-      operator = "="
+      operator = "regexp"
       value = "${var.host_placement}"
     }
 
@@ -77,17 +77,17 @@ job "registry" {
 
             config {
                 privileged=true
-                image = "registry:2.4"
+                auth_soft_fail=true
+                image = "registry:2.8"
                 ports = ["http"]
                 volumes = [
-                    "/vagrant/data/registry:/var/lib/registry",
+                    "/vagrant/common/registry:/var/lib/registry",
                     "local/registry:/etc/docker/registry"
                 ]
             }
             resources {
                 memory=1024
-                disk=1024
-                cpu=2500
+                cpu=2501
             }
         
         }

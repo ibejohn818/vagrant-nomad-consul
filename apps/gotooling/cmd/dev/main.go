@@ -17,10 +17,10 @@ func progress(jdm *hashi.JobDeployMonitor, d *nomad.Deployment) {
 // registryPath := "/home/jhardy/projects/lab/vagrant-nomad-consul/jobs/registry.hcl"
 // promPath := "/home/jhardy/projects/lab/vagrant-nomad-consul/jobs/prometheus.hcl"
 var jobs map[string]string = map[string]string{
-	"ingress":    "/home/jhardy/projects/lab/vagrant-nomad-consul/jobs/ingress.hcl",
-	"registry":   "/home/jhardy/projects/lab/vagrant-nomad-consul/jobs/registry.hcl",
-	"prometheus": "/home/jhardy/projects/lab/vagrant-nomad-consul/jobs/prometheus.hcl",
-	"grafana": "/home/jhardy/projects/lab/vagrant-nomad-consul/jobs/grafana.hcl",
+	"ingress":    "/Users/jhardy/projects/lab/vagrant-nomad-consul/jobs/ingress.hcl",
+	"registry":   "/Users/jhardy/projects/lab/vagrant-nomad-consul/jobs/registry.hcl",
+	// "prometheus": "/home/jhardy/projects/lab/vagrant-nomad-consul/jobs/prometheus.hcl",
+	// "grafana": "/home/jhardy/projects/lab/vagrant-nomad-consul/jobs/grafana.hcl",
 }
 
 var ncli *nomad.Client = hashi.NomadClient()
